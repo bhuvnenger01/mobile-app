@@ -6,7 +6,7 @@ import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 import axios from 'axios';
 
-const socket = io("http://192.168.172.237:5000"); // Your Flask backend URL
+const socket = io("https://letchatit1-production.up.railway.app/"); // Your Flask backend URL
 
 const ChatRoom = () => {
   const [messages, setMessages] = useState<string[]>([]);
@@ -24,7 +24,7 @@ const ChatRoom = () => {
           ? localStorage.getItem('userToken') 
           : await SecureStore.getItemAsync('userToken');
 
-        const response = await axios.get('http://192.168.172.237:5000/protected', {
+        const response = await axios.get('https://letchatit1-production.up.railway.app//protected', {
           headers: { Authorization: `Bearer ${token}` },
         });
         setUsername(response.data.username);
@@ -75,7 +75,7 @@ const ChatRoom = () => {
         ? localStorage.getItem('userToken') 
         : await SecureStore.getItemAsync('userToken');
 
-      const response = await axios.post('http://192.168.172.237:5000/refresh', { token });
+      const response = await axios.post('https://letchatit1-production.up.railway.app//refresh', { token });
       const newToken = response.data.token;
       const newExpirationTime = Date.now() + 60 * 60 * 1000; // Assume new token expires in 1 hour
 
@@ -113,31 +113,40 @@ const ChatRoom = () => {
     }
   };
 
+  const fetchMessages = async () => {
+    try {
+      const response = await axios.get(`https://letchatit1-production.up.railway.app/messages`, {
+        headers: { Authorization: `Bearer ${Platform.OS==='web'?localStorage.getItem('userToken'): await SecureStore.getItemAsync('userToken')}` },
+      });
+      setMessages(response.data);
+    } catch (error) {
+      console.error('Error fetching messages:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchMessages();
+  }, []);
+
   return (
     <View style={styles.container}>
       <Text style={styles.welcomeText}>Welcome {username}!</Text>
       <Text style={styles.roomText}>Room: {room}</Text>
       <FlatList
         data={messages}
-        renderItem={({ item }) => (
-          <View style={styles.messageBubble}>
-            <Text style={styles.messageText}>{item}</Text>
-          </View>
-        )}
+        renderItem={({ item }) => <Text style={styles.messageText}>{item}</Text>}
         keyExtractor={(item, index) => index.toString()}
-        style={styles.messageList}
       />
-      <View style={styles.inputContainer}>
-        <TextInput
-          placeholder="Type your message..."
-          value={message}
-          onChangeText={setMessage}
-          style={styles.input}
-        />
-        <TouchableOpacity style={styles.sendButton} onPress={sendMessage}>
-          <Text style={styles.sendButtonText}>Send</Text>
-        </TouchableOpacity>
-      </View>
+      <TextInput
+        style={styles.input}
+        placeholder="Type your message..."
+        value={message}
+        onChangeText={setMessage}
+        onSubmitEditing={sendMessage}
+      />
+      <TouchableOpacity style={styles.sendButton} onPress={sendMessage}>
+        <Text style={styles.sendButtonText}>Send</Text>
+      </TouchableOpacity>
     </View>
   );
 };
@@ -146,55 +155,36 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: '#fff',
   },
   welcomeText: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: 20,
     marginBottom: 10,
   },
   roomText: {
-    fontSize: 18,
-    color: '#555',
-    marginBottom: 20,
-  },
-  messageList: {
-    flex: 1,
+    fontSize: 16,
     marginBottom: 10,
-  },
-  messageBubble: {
-    backgroundColor: '#007aff',
-    borderRadius: 15,
-    padding: 10,
-    marginVertical: 5,
-    maxWidth: '80%',
-    alignSelf: 'flex-start',
+    fontStyle: 'italic',
   },
   messageText: {
-    color: '#fff',
     fontSize: 16,
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    marginVertical: 5,
   },
   input: {
-    flex: 1,
+    height: 40,
+    borderColor: 'gray',
     borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 5,
-    padding: 10,
-    marginRight: 10,
-    backgroundColor: '#fff',
+    marginBottom: 10,
+    paddingHorizontal: 10,
   },
   sendButton: {
-    backgroundColor: '#007aff',
-    borderRadius: 5,
+    backgroundColor: '#007BFF',
     padding: 10,
+    alignItems: 'center',
   },
   sendButtonText: {
     color: '#fff',
-    fontWeight: 'bold',
+    fontSize: 16,
   },
 });
 

@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   BackHandler,
   Platform,
+  ActivityIndicator,
 } from "react-native";
 import axios from "axios";
 import * as SecureStore from "expo-secure-store";
@@ -16,6 +17,7 @@ import { MaterialIcons } from '@expo/vector-icons'; // Importing icons
 
 export default function DashboardScreen() {
   const [username, setUsername] = useState("");
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
@@ -26,19 +28,22 @@ export default function DashboardScreen() {
           : await SecureStore.getItemAsync("userToken");
 
         const response = await axios.get(
-          "http://192.168.172.237:5000/protected",
+          "https://letchatit1-production.up.railway.app/protected",
           {
             headers: { Authorization: `Bearer ${token}` },
           }
         );
         setUsername(response.data.username);
+        setLoading(false); // Set loading to false after fetching data
       } catch (error) {
         Alert.alert("Error", "Session expired or invalid");
-        router.push("/Login");
+        handleLogout();
       }
     };
 
     fetchProtectedData();
+
+    const interval = setInterval(fetchProtectedData, 60000); // Check session every 60 seconds
 
     const backHandler = BackHandler.addEventListener(
       "hardwareBackPress",
@@ -48,7 +53,10 @@ export default function DashboardScreen() {
       }
     );
 
-    return () => backHandler.remove(); // Cleanup listener
+    return () => {
+      clearInterval(interval); // Cleanup interval
+      backHandler.remove(); // Cleanup listener
+    };
   }, [router]);
 
   const handleLogout = async () => {
@@ -60,10 +68,22 @@ export default function DashboardScreen() {
     router.replace("/Login");
   };
 
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Text style={styles.appname}>LetsChat.it</Text>
+        <ActivityIndicator size="large" color="#2575fc" />
+      </View>
+    );
+  }
+
   return (
     <>
       <View style={styles.header}>
         <Text style={styles.appname}>LetsChat.it</Text>
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+          <MaterialIcons name="logout" size={24} color="white" />
+        </TouchableOpacity>
       </View>
       <LinearGradient
         colors={["#6a11cb", "#2575fc"]} // Changed gradient colors
@@ -80,16 +100,18 @@ export default function DashboardScreen() {
           <MaterialIcons name="chat" size={24} color="white" />
           <Text style={styles.buttonText}>Chat Room</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.button} onPress={handleLogout}>
-          <MaterialIcons name="logout" size={24} color="white" />
-          <Text style={styles.buttonText}>Logout</Text>
-        </TouchableOpacity>
       </View>
     </>
   );
 }
 
 const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#f0f0f0",
+  },
   background: {
     flex: 1,
     justifyContent: "flex-start",
@@ -110,12 +132,15 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: "#6a11cb",
-    padding: 20,
+    padding: 40,
     elevation: 5,
     shadowColor: "#000",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   appname: {
-    fontSize: 30,
+    fontSize: 30 ,
     color: '#FFFFFF',
     fontWeight: 'bold',
   },
@@ -132,7 +157,7 @@ const styles = StyleSheet.create({
   },
   button: {
     backgroundColor: "#2575fc",
- padding: 15,
+    padding: 15,
     borderRadius: 5,
     alignItems: "center",
     width: "80%",
@@ -156,5 +181,11 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#333",
     marginBottom: 10,
+  },
+  logoutButton: {
+    backgroundColor: "red",
+    borderRadius: 5,
+    padding: 10,
+    
   },
 });

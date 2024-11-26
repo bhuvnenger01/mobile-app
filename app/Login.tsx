@@ -1,30 +1,28 @@
-import React, { useState, useRef } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Animated, Easing } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import axios from 'axios';
 
-const LoginSignupScreen = () => {
-  const [isLogin, setIsLogin] = useState(true);
+const LoginScreen = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [email, setEmail] = useState('');
   const router = useRouter();
-  const animatedValue = useRef(new Animated.Value(0)).current;
 
-  const toggleForm = () => {
-    setIsLogin(!isLogin);
-    Animated.timing(animatedValue, {
-      toValue: isLogin ? 1 : 0,
-      duration: 500,
-      easing: Easing.linear,
-      useNativeDriver: true,
-    }).start();
-  };
+  useEffect(() => {
+    const checkSession = async () => {
+      const token = await SecureStore.getItemAsync('userToken');
+      if (token) {
+        router.replace('/'); // Redirect if session is found
+      }
+    };
+
+    checkSession();
+  }, []);
 
   const handleLogin = async () => {
     try {
-      const response = await axios.post('http://192.168.172.237:5000/login', {
+      const response = await axios.post('https://letchatit1-production.up.railway.app/login', {
         username,
         password,
       });
@@ -34,108 +32,36 @@ const LoginSignupScreen = () => {
       await SecureStore.setItemAsync('userToken', token);
       await SecureStore.setItemAsync('tokenExpiration', tokenExpiration.toString());
 
-      alert('Login Successful');
-      router.replace('/(tabs)/ChatRoom');
+      Alert.alert('Login Successful');
+      router.replace('/ChatRoom');
     } catch (error) {
-      alert('Error', 'Invalid credentials');
+      Alert.alert('Error', 'Invalid credentials');
     }
-  };
-
-  const handleSignup = async () => {
-    try {
-      const response = await axios.post('http://192.168.172.237:5000/signup', {
-        username,
-        password,
-        email,
-      });
-      alert('Signup Successful');
-      toggleForm(); // Switch to login form after successful signup
-    } catch (error) {
-      alert('Error', 'Signup failed');
-    }
-  };
-
-  const frontInterpolate = animatedValue.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', '180deg'],
-  });
-
-  const backInterpolate = animatedValue.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['180deg', '360deg'],
-  });
-
-  const frontAnimatedStyle = {
-    transform: [{ rotateY: frontInterpolate }],
-    position: 'absolute',
-    width: '100%',
-    height: '100%',
-    backfaceVisibility: 'hidden', // Set to 'hidden'
-  };
-
-  const backAnimatedStyle = {
-    transform: [{ rotateY: backInterpolate }],
-    position: 'absolute',
-    width: '100%',
-    height: '100%',
-    backfaceVisibility: 'hidden', // Set to 'hidden'
   };
 
   return (
     <View style={styles.container}>
-      <View style={styles.cardContainer}>
-        {/* Front Side - Login Form */}
-        <Animated.View style={[styles.card, frontAnimatedStyle]}>
-          <Text style={styles.title}>Login</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Username"
-            value={username}
-            onChangeText={setUsername}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Password"
-            secureTextEntry
-            value={password}
-            onChangeText={setPassword}
-          />
-          <TouchableOpacity style={styles.button} onPress={handleLogin}>
-            <Text style={styles.buttonText}>Login</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={toggleForm}>
-            <Text style={styles.toggleText}>Don't have an account? Sign Up</Text>
-          </TouchableOpacity>
-        </Animated.View>
-
-        {/* Back Side - Signup Form */}
-        <Animated.View style={[styles.card, backAnimatedStyle]}>
-          <Text style={styles.title}>Sign Up</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Username"
-            value={username}
-            onChangeText={setUsername}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Email"
-            value={email}
-            onChangeText={setEmail}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Password"
-            secureTextEntry
-            value={password}
-            onChange Text={setPassword} />
-          <TouchableOpacity style={styles.button} onPress={handleSignup}>
-            <Text style={styles.buttonText}>Sign Up</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={toggleForm}>
-            <Text style={styles.toggleText}>Already have an account? Login</Text>
-          </TouchableOpacity>
-        </Animated.View>
+      <View style={styles.card}>
+        <Text style={styles.title}>Login</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Username"
+          value={username}
+          onChangeText={setUsername}
+        />
+        <TextInput
+          style={styles.input}
+          placeholder="Password"
+          secureTextEntry
+          value={password}
+          onChangeText={setPassword}
+        />
+        <TouchableOpacity style={styles.button} onPress={handleLogin}>
+          <Text style={styles.buttonText}>Login</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => router.push('/Register')}>
+          <Text style={styles.toggleText}>Don't have an account? Sign Up</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -148,11 +74,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#f0f0f0',
   },
-  cardContainer: {
-    width: 300,
-    height: 400,
-    perspective: '1000px', // Change perspective to a string with a unit
-  },
   card: {
     borderRadius: 10,
     backgroundColor: '#fff',
@@ -160,6 +81,7 @@ const styles = StyleSheet.create({
     elevation: 5,
     justifyContent: 'center',
     alignItems: 'center',
+    width: 300,
   },
   title: {
     fontSize: 24,
@@ -193,4 +115,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default LoginSignupScreen;
+export default LoginScreen;
